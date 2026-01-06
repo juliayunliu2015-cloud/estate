@@ -62,11 +62,21 @@ def create_dashboard(df):
     display_df = df.copy()
     
     # Format Dollars and Percentages for the table display
+# REPLACE THIS SECTION IN YOUR app.py:
     for col in year_cols:
         # Format Price Rows (Index 1 and 2 usually Avg/Med Price)
-        display_df.loc[1:2, col] = display_df.loc[1:2, col].apply(lambda x: f"${x:,.0f}")
+        # We check if the index exists to prevent errors
+        if 1 in display_df.index:
+            val = display_df.at[1, col]
+            display_df.at[1, col] = f"${float(val):,.0f}"
+        if 2 in display_df.index:
+            val = display_df.at[2, col]
+            display_df.at[2, col] = f"${float(val):,.0f}"
+            
         # Format SNLR Row (Index 4)
-        display_df.loc[4, col] = display_df.loc[4, col].apply(lambda x: f"{x}%")
+        if 4 in display_df.index:
+            val = display_df.at[4, col]
+            display_df.at[4, col] = f"{val}%"
 
     table = ax_table.table(
         cellText=display_df.values, 
