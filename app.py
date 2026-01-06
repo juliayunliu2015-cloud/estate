@@ -79,7 +79,7 @@ def create_dashboard(df, comparison_cols):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F2EFED')
 
-    ax_table.set_title(f"Market Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
+    ax_table.set_title(f"\nMarket Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
                        fontsize=30, fontweight='bold', pad=40)
 
     # --- CHART SECTION ---
