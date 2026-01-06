@@ -80,7 +80,7 @@ def create_dashboard(df, comparison_cols):
             cell.set_facecolor('white' if row % 2 == 0 else '#F2EFED')
 
     ax_table.set_title(f"\nMarket Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
-                       fontsize=30, fontweight='bold', pad=40)
+                       fontsize=30, fontweight='bold', pad=30)
 
     # --- CHART SECTION ---
     ax_chart = fig.add_subplot(gs[1])
