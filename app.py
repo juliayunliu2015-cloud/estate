@@ -7,7 +7,7 @@ import ast
 
 # 1. PAGE CONFIG
 st.set_page_config(page_title="Dynamic Market Analytics", layout="wide")
-
+st.write("")
 st.title("📊 Flexible Market Comparison Dashboard")
 st.markdown("Paste any data dictionary. The app will automatically detect your Months/Years.")
 
