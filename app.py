@@ -100,3 +100,24 @@ def create_dashboard(df, comparison_cols):
 
     # Add Value Labels
     for i, v in enumerate(v1):
+        ax_chart.text(i - width/2, v + 2, f"{v}", ha='center', fontweight='bold')
+    for i, v in enumerate(v2):
+        ax_chart.text(i + width/2, v + 2, f"{v}", ha='center', fontweight='bold')
+
+    ax_chart.set_xticks(x)
+    ax_chart.set_xticklabels(plot_metrics, fontsize=14)
+    ax_chart.legend(fontsize=14, frameon=False)
+    ax_chart.spines['top'].set_visible(False)
+    ax_chart.spines['right'].set_visible(False)
+
+    return fig
+
+# 4. RUN DASHBOARD
+if not df.empty:
+    chart_fig = create_dashboard(df, comparison_cols)
+    st.pyplot(chart_fig)
+    
+    # Export Download Button
+    buf = io.BytesIO()
+    chart_fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+    st.download_button("Download Image", buf.getvalue(), f"Report_{comparison_cols[1]}.png", "image/png")
