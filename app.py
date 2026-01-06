@@ -69,7 +69,7 @@ def create_dashboard(df, comparison_cols):
     table.auto_set_font_size(False)
     table.set_fontsize(13)
     table.scale(1, 4)
-
+    fig.subplots_adjust(top=0.90)
     # Style Header and Rows
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor('#D1D1D1')
@@ -109,7 +109,7 @@ def create_dashboard(df, comparison_cols):
     ax_chart.legend(fontsize=14, frameon=False)
     ax_chart.spines['top'].set_visible(False)
     ax_chart.spines['right'].set_visible(False)
-fig.subplots_adjust(top=0.90)
+
     return fig
 
 # 4. RUN DASHBOARD
