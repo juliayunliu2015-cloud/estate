@@ -6,91 +6,71 @@ import io
 import ast
 
 # 1. PAGE CONFIG
-st.set_page_config(page_title="Halton Real Estate Dashboard", layout="wide")
+st.set_page_config(page_title="Dynamic Market Analytics", layout="wide")
 
-st.title("📊 Real Estate Market Analytics")
-st.markdown("Update the dashboard by pasting your data dictionary into the box on the left.")
+st.title("📊 Flexible Market Comparison Dashboard")
+st.markdown("Paste any data dictionary. The app will automatically detect your Months/Years.")
 
-# --- SIDEBAR: THE TEXT FIELD ---
-st.sidebar.header("Manual Data Input")
+# --- SIDEBAR ---
+st.sidebar.header("Data Configuration")
 
-# Initial placeholder data
 default_data = """{
     'Metric': [
         'Sale Volume', 'Avg Sale Price', 'Med Sale Price', 
         'New Listings', 'SNLR', 'Active Listings', 'MOI'
     ],
-    'Jan 2025': [136, 1364747, 1249250, 609, 22, 780, 5.78],
-    'Jan 2026': [132, 1313103, 1150000, 193, 68, 703, 6.01]
+    'Feb 2024': [120, 1250000, 1100000, 500, 24, 600, 5.0],
+    'Feb 2025': [145, 1380000, 1200000, 550, 26, 620, 4.2]
 }"""
 
-raw_input = st.sidebar.text_area(
-    "Paste your Data Dictionary here:", 
-    value=default_data, 
-    height=350,
-    help="Ensure the format is exactly like the example provided."
-)
+raw_input = st.sidebar.text_area("Paste Python Data Dict Here:", value=default_data, height=300)
 
-# 2. DATA PROCESSING
+# 2. DYNAMIC DATA LOADING
 try:
-    # Safely convert the string into a Python dictionary
     data_dict = ast.literal_eval(raw_input.strip())
     df = pd.DataFrame(data_dict)
     
-    # Identify Year Columns (all columns except 'Metric')
-    year_cols = [c for c in df.columns if c != 'Metric']
-    st.sidebar.success(f"✅ Loaded data for: {', '.join(year_cols)}")
+    # DYNAMICALLY IDENTIFY COLUMNS
+    # The first column is our Metric labels, the rest are our "Comparison Variables"
+    all_cols = df.columns.tolist()
+    metric_col = all_cols[0]
+    comparison_cols = all_cols[1:3] # Automatically picks the next two keys you provide
+    
+    st.sidebar.success(f"✅ Comparing: {comparison_cols[0]} vs {comparison_cols[1]}")
 except Exception as e:
-    st.sidebar.error(f"⚠️ Data Format Error: Please check your brackets and commas.")
-    st.stop() # Stop execution if data is broken
+    st.sidebar.error("⚠️ Formatting Error. Check your commas and brackets.")
+    st.stop()
 
 # 3. DASHBOARD GENERATION
-def create_dashboard(df):
-    # Styling Variables
+def create_dashboard(df, comparison_cols):
     bg_color = '#F9F4EC' 
     c_teal = '#2C5F63'
     c_rust = '#D96C45'
     
-    # High-Res Setup
-    fig = plt.figure(figsize=(18, 24), facecolor=bg_color)
-    gs = fig.add_gridspec(3, 1, height_ratios=[0.8, 1, 0.15], hspace=0.4)
+    fig = plt.figure(figsize=(18, 22), facecolor=bg_color)
+    gs = fig.add_gridspec(3, 1, height_ratios=[0.8, 1, 0.1], hspace=0.4)
 
-    # --- SECTION A: FORMATTED TABLE ---
+    # --- TABLE SECTION ---
     ax_table = fig.add_subplot(gs[0])
     ax_table.axis('off')
-    
     display_df = df.copy()
-    
-    # Format Dollars and Percentages for the table display
-# REPLACE THIS SECTION IN YOUR app.py:
-    for col in year_cols:
-        # Format Price Rows (Index 1 and 2 usually Avg/Med Price)
-        # We check if the index exists to prevent errors
-        if 1 in display_df.index:
-            val = display_df.at[1, col]
-            display_df.at[1, col] = f"${float(val):,.0f}"
-        if 2 in display_df.index:
-            val = display_df.at[2, col]
-            display_df.at[2, col] = f"${float(val):,.0f}"
-            
-        # Format SNLR Row (Index 4)
-        if 4 in display_df.index:
-            val = display_df.at[4, col]
-            display_df.at[4, col] = f"{val}%"
 
-    table = ax_table.table(
-        cellText=display_df.values, 
-        colLabels=display_df.columns, 
-        loc='center', 
-        cellLoc='center', 
-        bbox=[0.05, 0, 0.9, 0.85]
-    )
-    
+    # Dynamic Formatting Logic
+    for col in comparison_cols:
+        if 1 in display_df.index: # Avg Price
+            display_df.at[1, col] = f"${float(display_df.at[1, col]):,.0f}"
+        if 2 in display_df.index: # Med Price
+            display_df.at[2, col] = f"${float(display_df.at[2, col]):,.0f}"
+        if 4 in display_df.index: # SNLR %
+            display_df.at[4, col] = f"{display_df.at[4, col]}%"
+
+    table = ax_table.table(cellText=display_df.values, colLabels=display_df.columns, 
+                           loc='center', cellLoc='center', bbox=[0.05, 0, 0.9, 0.85])
     table.auto_set_font_size(False)
     table.set_fontsize(13)
     table.scale(1, 4)
 
-    # Style Header and Alternating Rows
+    # Style Header and Rows
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor('#D1D1D1')
         if row == 0:
@@ -99,56 +79,24 @@ def create_dashboard(df):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F2EFED')
 
-    ax_table.set_title(f"Year-Over-Year Market Comparison ({' vs '.join(year_cols)})", 
-                       fontsize=30, fontweight='bold', pad=40, color='#2B3A42')
+    ax_table.set_title(f"Market Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
+                       fontsize=30, fontweight='bold', pad=40)
 
-    # --- SECTION B: COMPARATIVE CHART ---
+    # --- CHART SECTION ---
     ax_chart = fig.add_subplot(gs[1])
     ax_chart.set_facecolor(bg_color)
     
-    # Mapping metrics to bar chart
-    metrics_to_plot = ['Sale Volume', 'New Listings', 'Active Listings', 'SNLR']
-    # Get indices for these metrics
-    indices = [df[df['Metric'] == m].index[0] for m in metrics_to_plot]
+    plot_metrics = ['Sale Volume', 'New Listings', 'Active Listings', 'SNLR']
+    # Match plot metrics to their index in your data
+    indices = [df[df[metric_col] == m].index[0] for m in plot_metrics if m in df[metric_col].values]
     
     v1 = df.iloc[indices, 1].values
     v2 = df.iloc[indices, 2].values
 
-    x = np.arange(len(metrics_to_plot))
+    x = np.arange(len(plot_metrics))
     width = 0.35
+    ax_chart.bar(x - width/2, v1, width, label=comparison_cols[0], color=c_teal, alpha=0.9)
+    ax_chart.bar(x + width/2, v2, width, label=comparison_cols[1], color=c_rust, alpha=0.9)
 
-    ax_chart.bar(x - width/2, v1, width, label=year_cols[0], color=c_teal, alpha=0.9)
-    ax_chart.bar(x + width/2, v2, width, label=year_cols[1], color=c_rust, alpha=0.9)
-
-    # Data Labels
+    # Add Value Labels
     for i, v in enumerate(v1):
-        ax_chart.text(i - width/2, v + 5, f"{v}", ha='center', fontweight='bold', fontsize=12)
-    for i, v in enumerate(v2):
-        ax_chart.text(i + width/2, v + 5, f"{v}", ha='center', fontweight='bold', fontsize=12)
-
-    ax_chart.set_title('Market Dynamics: Inventory vs. Absorption', fontsize=26, fontweight='bold', pad=30)
-    ax_chart.set_xticks(x)
-    ax_chart.set_xticklabels(metrics_to_plot, fontsize=16)
-    ax_chart.legend(fontsize=16, frameon=False, loc='upper right')
-    ax_chart.spines['top'].set_visible(False)
-    ax_chart.spines['right'].set_visible(False)
-    ax_chart.yaxis.grid(True, linestyle='--', alpha=0.3)
-
-    return fig
-
-# 4. MAIN INTERFACE
-chart_fig = create_dashboard(df)
-st.pyplot(chart_fig)
-
-# --- DOWNLOAD ACTION ---
-buf = io.BytesIO()
-chart_fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-st.download_button(
-    label="📩 Download 8K Resolution Dashboard",
-    data=buf.getvalue(),
-    file_name=f"Market_Report_{year_cols[1]}.png",
-    mime="image/png"
-)
-
-st.divider()
-st.caption("Data processed locally. Created for Halton Region Analytics Portfolio.")
