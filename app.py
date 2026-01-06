@@ -91,7 +91,7 @@ def generate_plot(df):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F5F2ED')
 
-    ax_table.set_title('Year-Over-Year Market Comparison', fontsize=28, fontweight='bold', pad=40)
+    ax_table.set_title('Year-Over-Year Market Comparison', fontsize=28, fontweight='bold', pad=20)
 
     # CHART SECTION
     ax_chart = fig.add_subplot(gs[1])
