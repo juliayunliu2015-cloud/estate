@@ -4,45 +4,60 @@ import pandas as pd
 import numpy as np
 from matplotlib.ticker import FuncFormatter
 import io
-import ast
 
 # Page Configuration
 st.set_page_config(page_title="Halton Real Estate Analytics", layout="wide")
 
-st.title("📊 Halton Market Comparison Dashboard")
-st.markdown("Paste your Python-style data dictionary in the sidebar to update the report instantly.")
+st.title("📊 Halton Market Year-Over-Year Comparison")
+st.markdown("Update the values in the sidebar or upload a CSV to generate the 8K Dashboard.")
 
 # --- SIDEBAR INPUTS ---
-st.sidebar.header("Data Configuration")
+st.sidebar.header("Manual Data Input")
 
-# Default data string for the text area
-default_data_str = """{
-    'Metric': [
-        'Sale Volume', 'Avg Sale Price', 'Med Sale Price', 
-        'New Listings', 'SNLR', 'Active Listings', 'MOI'
-    ],
-    'Jan 2025': [136, 1364747, 1249250, 609, 22, 780, 5.78],
-    'Jan 2026': [132, 1313103, 1150000, 193, 68, 703, 6.01]
-}"""
+def manual_input():
+    metrics = ['Sale Volume', 'Avg Sale Price', 'Med Sale Price', 'New Listings', 'SNLR', 'Active Listings', 'MOI']
+    
+    col1, col2 = st.sidebar.columns(2)
+    
+    jan_2025 = []
+    jan_2026 = []
+    
+    with col1:
+        st.subheader("Jan 2025")
+        jan_2025.append(st.number_input("Sales (25)", value=136))
+        jan_2025.append(st.number_input("Avg Price (25)", value=1364747))
+        jan_2025.append(st.number_input("Med Price (25)", value=1249250))
+        jan_2025.append(st.number_input("New List (25)", value=609))
+        jan_2025.append(st.number_input("SNLR % (25)", value=22))
+        jan_2025.append(st.number_input("Active (25)", value=780))
+        jan_2025.append(st.number_input("MOI (25)", value=5.78))
 
-# Text box for raw data input
-raw_input = st.sidebar.text_area("Paste Python Data Dict Here:", value=default_data_str, height=300)
+    with col2:
+        st.subheader("Jan 2026")
+        jan_2026.append(st.number_input("Sales (26)", value=132))
+        jan_2026.append(st.number_input("Avg Price (26)", value=1313103))
+        jan_2026.append(st.number_input("Med Price (26)", value=1150000))
+        jan_2026.append(st.number_input("New List (26)", value=193))
+        jan_2026.append(st.number_input("SNLR % (26)", value=68))
+        jan_2026.append(st.number_input("Active (26)", value=703))
+        jan_2026.append(st.number_input("MOI (26)", value=6.01))
 
-# Process the input data
-try:
-    # Safely evaluate the string as a Python dictionary
-    data_dict = ast.literal_eval(raw_input)
-    df = pd.DataFrame(data_dict)
-    st.sidebar.success("✅ Data parsed successfully!")
-except Exception as e:
-    st.sidebar.error(f"❌ Error in data format: {e}")
-    # Fallback to empty/dummy dataframe to prevent crash
-    df = pd.DataFrame(columns=['Metric', 'Jan 2025', 'Jan 2026'])
+    return pd.DataFrame({
+        'Metric': metrics,
+        'Jan 2025': jan_2025,
+        'Jan 2026': jan_2026
+    })
+
+# --- DATA SOURCE LOGIC ---
+uploaded_file = st.sidebar.file_uploader("Or Upload CSV", type="csv")
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+else:
+    df = manual_input()
 
 # --- CHART GENERATION FUNCTION ---
 def generate_plot(df):
-    if df.empty: return None
-    
     bg_color = '#F9F4EC' 
     text_color = '#2B3A42'
     c_teal = '#2C5F63'
@@ -56,14 +71,11 @@ def generate_plot(df):
     ax_table.axis('off')
     
     display_df = df.copy()
-    
-    # Identify columns dynamically (exclude 'Metric')
-    data_cols = [c for c in display_df.columns if c != 'Metric']
-    
-    # Formatting (Price and Percentages)
-    for col in data_cols:
-        display_df.loc[1:2, col] = display_df.loc[1:2, col].apply(lambda x: f"${float(x):,.0f}")
-        display_df.loc[4, col] = display_df.loc[4, col].apply(lambda x: f"{x}%")
+    # Formatting
+    display_df.loc[1:2, 'Jan 2025'] = display_df.loc[1:2, 'Jan 2025'].apply(lambda x: f"${x:,.0f}")
+    display_df.loc[1:2, 'Jan 2026'] = display_df.loc[1:2, 'Jan 2026'].apply(lambda x: f"${x:,.0f}")
+    display_df.loc[4, 'Jan 2025'] = f"{display_df.loc[4, 'Jan 2025']}%"
+    display_df.loc[4, 'Jan 2026'] = f"{display_df.loc[4, 'Jan 2026']}%"
 
     table = ax_table.table(cellText=display_df.values, colLabels=display_df.columns, 
                            loc='center', cellLoc='center', bbox=[0.05, 0, 0.9, 0.8])
@@ -79,29 +91,24 @@ def generate_plot(df):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F5F2ED')
 
-    ax_table.set_title(f'Market Comparison: {data_cols[0]} vs {data_cols[1]}', fontsize=28, fontweight='bold', pad=40)
+    ax_table.set_title('Year-Over-Year Market Comparison', fontsize=28, fontweight='bold', pad=40)
 
     # CHART SECTION
     ax_chart = fig.add_subplot(gs[1])
     ax_chart.set_facecolor(bg_color)
     
     plot_metrics = ['Sale Volume', 'New Listings', 'Active Listings', 'SNLR']
-    
-    # Extract indices based on metric names
-    idx_map = {name: i for i, name in enumerate(df['Metric'])}
-    
-    v1_indices = [idx_map['Sale Volume'], idx_map['New Listings'], idx_map['Active Listings'], idx_map['SNLR']]
-    v1 = df.iloc[v1_indices, 1].tolist()
-    v2 = df.iloc[v1_indices, 2].tolist()
+    v25 = [df.iloc[0,1], df.iloc[3,1], df.iloc[5,1], df.iloc[4,1]]
+    v26 = [df.iloc[0,2], df.iloc[3,2], df.iloc[5,2], df.iloc[4,2]]
 
     x = np.arange(len(plot_metrics))
     width = 0.35
-    ax_chart.bar(x - width/2, v1, width, label=data_cols[0], color=c_teal, alpha=0.8)
-    ax_chart.bar(x + width/2, v2, width, label=data_cols[1], color=c_rust, alpha=0.8)
+    ax_chart.bar(x - width/2, v25, width, label='Jan 2025', color=c_teal, alpha=0.8)
+    ax_chart.bar(x + width/2, v26, width, label='Jan 2026', color=c_rust, alpha=0.8)
 
-    for i, v in enumerate(v1):
+    for i, v in enumerate(v25):
         ax_chart.text(i - width/2, v + 5, str(v), ha='center', fontsize=10, fontweight='bold')
-    for i, v in enumerate(v2):
+    for i, v in enumerate(v26):
         ax_chart.text(i + width/2, v + 5, str(v), ha='center', fontsize=10, fontweight='bold')
 
     ax_chart.set_xticks(x)
@@ -113,7 +120,9 @@ def generate_plot(df):
     return fig
 
 # --- DISPLAY ---
-if not df.empty:
+col_main, col_spacer = st.columns([4, 1])
+
+with col_main:
     chart_fig = generate_plot(df)
     st.pyplot(chart_fig)
 
@@ -123,8 +132,6 @@ if not df.empty:
     st.download_button(
         label="Download Dashboard as PNG",
         data=buf.getvalue(),
-        file_name="halton_market_comparison.png",
+        file_name="halton_report.png",
         mime="image/png"
     )
-else:
-    st.warning("Please enter valid data in the sidebar to generate the report.")
