@@ -5,13 +5,11 @@ import numpy as np
 import io
 import ast
 
-# 1. PAGE CONFIG & LAYOUT
+# 1. PAGE CONFIG
 st.set_page_config(page_title="Halton Real Estate Analytics", layout="wide")
-
-# Precise CSS to add space at the very top of the web page
 st.markdown("<style>.block-container {padding-top: 5rem;}</style>", unsafe_allow_html=True)
 
-st.title("📊 Real Estate Market Comparison")
+st.title("📊 Full Market Comparison Dashboard")
 
 # --- SIDEBAR ---
 st.sidebar.header("Data Configuration")
@@ -31,23 +29,22 @@ try:
     data_dict = ast.literal_eval(raw_input.strip())
     df = pd.DataFrame(data_dict)
     all_cols = df.columns.tolist()
-    metric_col = all_cols[0]
     comparison_cols = all_cols[1:3] 
 except Exception as e:
     st.sidebar.error(f"Format Error: {e}")
     st.stop()
 
-# 3. DASHBOARD GENERATION FUNCTION
+# 3. DASHBOARD GENERATION
 def create_dashboard(df, comparison_cols):
     bg_color = '#F9F4EC' 
     c_teal = '#2C5F63'
     c_rust = '#D96C45'
+    c_gold = '#DAA520'
     
-    # Create figure with high resolution
-    fig = plt.figure(figsize=(18, 26), facecolor=bg_color)
-    gs = fig.add_gridspec(3, 1, height_ratios=[0.8, 1, 0.1], hspace=0.5)
+    fig = plt.figure(figsize=(20, 28), facecolor=bg_color)
+    gs = fig.add_gridspec(3, 1, height_ratios=[0.7, 1, 0.1], hspace=0.4)
 
-    # --- SECTION A: TABLE ---
+    # --- TABLE SECTION ---
     ax_table = fig.add_subplot(gs[0])
     ax_table.axis('off')
     display_df = df.copy()
@@ -63,7 +60,6 @@ def create_dashboard(df, comparison_cols):
     table.set_fontsize(13)
     table.scale(1, 4)
 
-    # Styling Table Header
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor('#D1D1D1')
         if row == 0:
@@ -72,70 +68,70 @@ def create_dashboard(df, comparison_cols):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F2EFED')
 
-    # SPACE ABOVE TITLE: Created via pad and subplots_adjust
     ax_table.set_title(f"Market Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
                        fontsize=32, fontweight='bold', pad=60)
 
-    # --- SECTION B: CHART (DUAL AXIS) ---
+    # --- CHART SECTION (DUAL AXIS ALL METRICS) ---
     ax_chart = fig.add_subplot(gs[1])
     ax_chart.set_facecolor(bg_color)
 
-    # Prepare Data
-    vol_metrics = ['Sale Volume', 'New Listings']
-    price_metrics = ['Avg Sale Price', 'Med Sale Price']
+    # Group 1: Unit Based (Left Axis)
+    unit_metrics = ['Sale Volume', 'New Listings', 'Active Listings', 'SNLR', 'MOI']
+    indices_unit = [0, 3, 5, 4, 6]
     
-    v1_vol = [df.iloc[0, 1], df.iloc[3, 1]]
-    v2_vol = [df.iloc[0, 2], df.iloc[3, 2]]
-    v1_price = [df.iloc[1, 1], df.iloc[2, 1]]
-    v2_price = [df.iloc[1, 2], df.iloc[2, 2]]
+    # Group 2: Price Based (Right Axis)
+    price_metrics = ['Avg Sale Price', 'Med Sale Price']
+    indices_price = [1, 2]
 
-    x = np.arange(len(vol_metrics + price_metrics))
+    x_units = np.arange(len(unit_metrics))
+    x_prices = np.arange(len(unit_metrics), len(unit_metrics) + len(price_metrics))
+    x_all = np.concatenate([x_units, x_prices])
+    
     width = 0.35
 
-    # Plot Volume Bars (Left Y-Axis)
-    rects1 = ax_chart.bar(x[:2] - width/2, v1_vol, width, label=f'{comparison_cols[0]}', color=c_teal)
-    rects2 = ax_chart.bar(x[:2] + width/2, v2_vol, width, label=f'{comparison_cols[1]}', color=c_teal, alpha=0.5)
+    # Plot Unit Bars (Left Axis)
+    v1_u = df.iloc[indices_unit, 1].values
+    v2_u = df.iloc[indices_unit, 2].values
+    r1 = ax_chart.bar(x_units - width/2, v1_u, width, label=f'{comparison_cols[0]} Units/%', color=c_teal)
+    r2 = ax_chart.bar(x_units + width/2, v2_u, width, label=f'{comparison_cols[1]} Units/%', color=c_teal, alpha=0.5)
 
-    # Plot Price Bars (Right Y-Axis)
+    # Plot Price Bars (Right Axis)
     ax_price = ax_chart.twinx()
-    rects3 = ax_price.bar(x[2:] - width/2, v1_price, width, label=f'{comparison_cols[0]} Price', color=c_rust)
-    rects4 = ax_price.bar(x[2:] + width/2, v2_price, width, label=f'{comparison_cols[1]} Price', color=c_rust, alpha=0.5)
+    v1_p = df.iloc[indices_price, 1].values
+    v2_p = df.iloc[indices_price, 2].values
+    r3 = ax_price.bar(x_prices - width/2, v1_p, width, label=f'{comparison_cols[0]} Price', color=c_rust)
+    r4 = ax_price.bar(x_prices + width/2, v2_p, width, label=f'{comparison_cols[1]} Price', color=c_rust, alpha=0.5)
 
     # Labels and Formatting
-    ax_chart.set_ylabel('Volume (Units)', fontsize=14, fontweight='bold', color=c_teal)
+    ax_chart.set_ylabel('Units / Ratio / Months', fontsize=14, fontweight='bold', color=c_teal)
     ax_price.set_ylabel('Price ($)', fontsize=14, fontweight='bold', color=c_rust)
     ax_price.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x*1e-6:1.1f}M'))
     
-    ax_chart.set_xticks(x)
-    ax_chart.set_xticklabels(vol_metrics + price_metrics, fontsize=14, fontweight='bold')
+    ax_chart.set_xticks(x_all)
+    ax_chart.set_xticklabels(unit_metrics + price_metrics, fontsize=12, fontweight='bold', rotation=15)
 
-    # Combined Legend
-    h1, l1 = ax_chart.get_legend_handles_labels()
-    h2, l2 = ax_price.get_legend_handles_labels()
-    ax_chart.legend(h1 + h2, l1 + l2, loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2, frameon=False)
-
-    # Adding Text Labels on Bars
+    # Labels on top of bars
     def add_labels(rects, axis, is_price=False):
         for rect in rects:
             h = rect.get_height()
-            label = f"${h/1e6:.2f}M" if is_price else f"{int(h)}"
-            axis.text(rect.get_x() + rect.get_width()/2., h + 3, label, ha='center', va='bottom', fontweight='bold')
+            label = f"${h/1e6:.2f}M" if is_price else f"{h:g}"
+            axis.text(rect.get_x() + rect.get_width()/2., h + (h*0.01), label, ha='center', va='bottom', fontweight='bold', fontsize=10)
 
-    add_labels(rects1, ax_chart)
-    add_labels(rects2, ax_chart)
-    add_labels(rects3, ax_price, True)
-    add_labels(rects4, ax_price, True)
+    add_labels(r1, ax_chart)
+    add_labels(r2, ax_chart)
+    add_labels(r3, ax_price, True)
+    add_labels(r4, ax_price, True)
 
-    # Final Layout Adjustment for space at the very top of the image
+    ax_chart.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2, frameon=False)
     fig.subplots_adjust(top=0.92) 
 
     return fig
 
-# 4. RUN AND DISPLAY
+# 4. DISPLAY
 chart_fig = create_dashboard(df, comparison_cols)
 st.pyplot(chart_fig)
 
-# Download Button
+# Download
 buf = io.BytesIO()
 chart_fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-st.download_button("📩 Download High-Res Dashboard", buf.getvalue(), "market_report.png", "image/png")
+st.download_button("📩 Download High-Res Dashboard", buf.getvalue(), "full_market_report.png", "image/png")
