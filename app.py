@@ -68,8 +68,8 @@ def create_dashboard(df, comparison_cols):
         else:
             cell.set_facecolor('white' if row % 2 == 0 else '#F2EFED')
 
-    ax_table.set_title(f"Market Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
-                       fontsize=32, fontweight='bold', pad=60)
+    ax_table.set_title(f"\nMarket Report: {comparison_cols[0]} vs {comparison_cols[1]}", 
+                       fontsize=32, fontweight='bold', pad=20)
 
     # Helper for labels
     def add_labels(rects, axis, is_price=False):
